@@ -23,6 +23,7 @@ public class BaiduAiFaceClient implements AiFaceClient {
     String SECRET_KEY = "TagluzL8GT4mmEAHwEjmvWxIL6hUiKxW";
     AipFace client = null;
     static String groupId = "sz";
+    String imageType = "BASE64";
 
     public BaiduAiFaceClient() {
         client = new AipFace(APP_ID, API_KEY, SECRET_KEY);
@@ -98,6 +99,41 @@ public class BaiduAiFaceClient implements AiFaceClient {
 
     @Override
     public void detect() {
+        HashMap<String,String> options = new HashMap<>();
+        options.put("face_field", "age,gender,glasses,facetype");
+        options.put("max_face_num", "3");
+        File faceImageFile = new File("C:\\Users\\yucan.zhang\\Pictures\\vague_faces");
+        File[] files = faceImageFile.listFiles();
+        for (File file : files) {
+            String img = null;
+            try {
+                img = Base64Util.encode(Files.readAllBytes(file.toPath()));
+                JSONObject jobj = client.detect(img, imageType, options);
+                int errorCode = jobj.getInt("error_code");
+                if (errorCode == 18) {
+                    try {
+                        Thread.sleep(500L);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    jobj = client.detect(img, imageType, null);
+                }
+                JSONObject dataNode = jobj.getJSONObject("result");
+                JSONArray faceNodes = dataNode.getJSONArray("face_list");
+                Iterator<Object> it = faceNodes.iterator();
+                System.out.println(file.getName() + " detect: facenum=" + dataNode.getInt("face_num"));
+                while (it.hasNext()) {
+                    JSONObject node = (JSONObject) it.next();
+                    String t = String.format("age:%s,probability=%s", node.has("age") ? node.getInt("age") : 0,
+                            node.getDouble("face_probability"));
+                    System.out.println(t);
+                }
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+        }
     }
 
     @Override
@@ -114,7 +150,7 @@ public class BaiduAiFaceClient implements AiFaceClient {
 
     @Override
     public void match() {
-        String imageType = "BASE64";
+
         // 2. 图片内容方式
         long s = System.nanoTime();
         File faceImageFile = new File("C:\\Users\\yucan.zhang\\Pictures\\compare_faces");
@@ -192,8 +228,8 @@ public class BaiduAiFaceClient implements AiFaceClient {
     public static void main(String[] args) throws IOException {
         BaiduAiFaceClient client = new BaiduAiFaceClient();
         // client.addUser();
-        client.match();
-
+        // client.match();
+        client.detect();
         // 删除用户
         // client.deleteUsersByGroupId(groupId);
     }

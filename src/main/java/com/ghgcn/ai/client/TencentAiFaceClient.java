@@ -16,6 +16,7 @@ import com.qcloud.image.ImageClient;
 import com.qcloud.image.request.FaceAddFaceRequest;
 import com.qcloud.image.request.FaceAddGroupIdsRequest;
 import com.qcloud.image.request.FaceDelPersonRequest;
+import com.qcloud.image.request.FaceDetectRequest;
 import com.qcloud.image.request.FaceGetPersonIdsRequest;
 import com.qcloud.image.request.FaceIdentifyRequest;
 import com.qcloud.image.request.FaceNewPersonRequest;
@@ -118,6 +119,30 @@ public class TencentAiFaceClient implements AiFaceClient {
 
     @Override
     public void detect() {
+        HashMap<String,String> options = new HashMap<>();
+        options.put("face_field", "age,gender,glasses,facetype");
+        options.put("max_face_num", "3");
+        File faceImageFile = new File("C:\\Users\\yucan.zhang\\Pictures\\vague_faces");
+        File[] files = faceImageFile.listFiles();
+        for (File file : files) {
+            String img = null;
+            FaceDetectRequest request = new FaceDetectRequest(bucketName, file.getName(), file, 0);
+            String ret = imageClient.faceDetect(request);
+            JSONObject jobj = new JSONObject(ret);
+            int errorCode = jobj.getInt("code");
+            if (errorCode == 0) {
+                JSONArray faceNodes = jobj.getJSONObject("data").getJSONArray("face");
+                Iterator<Object> it = faceNodes.iterator();
+                System.out.println(file.getName() + " detect: facenum=" + faceNodes.length());
+                while (it.hasNext()) {
+                    JSONObject node = (JSONObject) it.next();
+                    String t = String.format("age:%s,probability=%s,gender", node.getInt("age"), null,
+                            node.getInt("gender"));
+                    System.out.println(t);
+                }
+            }
+
+        }
     }
 
     @Override
@@ -197,8 +222,8 @@ public class TencentAiFaceClient implements AiFaceClient {
     public static void main(String[] args) throws IOException {
         TencentAiFaceClient client = new TencentAiFaceClient();
         // client.addUser();
-        client.match();
-
+        // client.match();
+        client.detect();
         // 删除用户
         // client.deleteUsersByGroupId("sz");
     }
